@@ -1,0 +1,12 @@
+
+#Ignore Pass Files
+01_SCRIPTS/*.epw
+01_SCRIPTS/*.log
+#Ignore Client Folders
+01_SCRIPTS/Z_*
+#Ignore Others
+02_LOGS
+03_FILES
+04_BACKUPS
+05_ARCHIVE
+ZZ_Testing
