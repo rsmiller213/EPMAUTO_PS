@@ -7,13 +7,15 @@ Param(
         [switch]$UseAPI
     )
 
-$CurLocation = Get-Location
-Set-Location -Path "$PSScriptRoot"
+
+$DIR_WORKING = Split-Path -Path $PSScriptRoot -Parent
+$DIR_MODULES = "$DIR_WORKING\01_SCRIPTS\EPM_Modules"
+Set-Location -Path "$DIR_WORKING\01_SCRIPTS"
 
 # -----------------------------------------------------------------------------------
 #   UTILITY IMPORTS
 # -----------------------------------------------------------------------------------
-Import-Module "$PSScriptRoot\EPM_Modules\EPM_Utils\EPM_Utils.psm1" -Force -WarningAction SilentlyContinue -DisableNameChecking
+Import-Module "$DIR_MODULES\EPM_Utils\EPM_Utils.psm1" -Force -WarningAction SilentlyContinue -DisableNameChecking
 
 Remove-Variable EPM_*
 Remove-Variable SV_*
@@ -30,7 +32,7 @@ $EPM_AUTO_CALL = "epmautomate"
 # -----------------------------------------------------------------------------------
 #   FILE & PATH INFORMATION
 # -----------------------------------------------------------------------------------
-$EPM_PATH_AUTO = Split-Path -Path $PSScriptRoot -Parent
+$EPM_PATH_AUTO = $DIR_WORKING
 $EPM_PATH_SCRIPTS = "$EPM_PATH_AUTO\01_SCRIPTS"
 $EPM_PATH_LOGS = "$EPM_PATH_AUTO\02_LOGS"
 $EPM_PATH_FILES_IN = "$EPM_PATH_AUTO\03_FILES\INBOUND"
@@ -76,7 +78,7 @@ if ($EPM_ENV -eq "PROD") {
 #   USE EPM API
 # -----------------------------------------------------------------------------------
 if ($useAPI) {
-    . "$PSScriptRoot\_EPMAPI_Config.ps1"
+    . "$EPM_PATH_SCRIPTS\_EPMAPI_Config.ps1"
 }
 $EPMAPI_USED = $UseAPI
 
@@ -88,7 +90,6 @@ $EPM_TASK_SEPARATOR = "=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 $EPM_PROCESS_RUNNING_FLAG = "$EPM_PATH_SCRIPTS\$EPM_PROCESS-Running.flag"
 $global:EPM_TASK_LIST = @()
 # Remove Error Log if Exists (would be from previous run)
-if (Test-Path $EPM_LOG_ERROR) { Remove-Item $EPM_LOG_ERROR }
 if (Test-Path $EPM_LOG_KICKOUTS) { Remove-Item $EPM_LOG_KICKOUTS }
 if (Test-Path $EPM_LOG_SECURITY) { Remove-Item $EPM_LOG_SECURITY }
 

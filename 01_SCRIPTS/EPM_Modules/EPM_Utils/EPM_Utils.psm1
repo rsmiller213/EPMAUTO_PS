@@ -477,19 +477,19 @@ function EPM_Send-Notification{
     if (Test-Path $EPM_LOG_KICKOUTS) {
         #Build Kickouts Table
         $EmailBody += $TableStyle
-        $EmailBody += "<caption style='border: 3px solid black; border-bottom: 0px; text-align: center; padding: 4px 3px; font-weight: bold; color:white; background: $TitleBgColor;'>KICKOUT SUMMARY</caption>"
+        $EmailBody += "<caption style='border: 3px solid black; border-bottom: 0px; text-align: center; padding: 4px 3px; font-weight: bold; color:white; background: $TitleBgColor;'>FIRST 15 KICKOUTS</caption>"
         #Build Kickouts Table Header
         $EmailBody += @"
         `n   <tr>
               <th style='$HeaderStyle text-align: center;'>Load ID</th>
               <th style='$HeaderStyle text-align: center;'>Load Rule</th>
               <th style='$HeaderStyle text-align: center;'>Load File</th>
-              <th style='$HeaderStyle text-align: center;'>Kickout Type</th>
+              <th style='$HeaderStyle text-align: center;'>Kickout Member</th>
               <th style='$HeaderStyle text-align: left;'>Kickout Record</th>
            </tr>
 "@
         #Add Kickouts to Table as Rows
-        ForEach ($line in (Get-Content -Path $EPM_LOG_KICKOUTS)) {
+        ForEach ($line in (Get-Content -Path $EPM_LOG_KICKOUTS | Select-Object -First 15)) {
             $arr = $line.split("#")
             $EmailBody += "`n   <tr>`n      <td style='$CellStyle text-align: center;'>$($arr[0])</td>"
             $EmailBody += "`n      <td style='$CellStyle text-align: center;'>$($arr[1].Trim())</td>"
@@ -939,7 +939,7 @@ function EPM_Get-File{
     $ListFiles = (EPM_Execute-EPMATask -TaskName "Export List of Files" -TaskCommand "listfiles" -ReturnOut -NoLog)
     $DLCount = 0
     ForEach($line in $ListFiles) {
-        if ($line.Trim() -like "$Name") {
+        if ($line.Trim().contains($Name)) {
             EPM_Execute-EPMATask -TaskName "Download $($line.Trim())" -TaskCommand "downloadFile" -TaskDetails ("`"$($line.Trim())`"") -TaskLevel $TaskLevel -ParentID $ParentID
             if ($LASTEXITCODE -eq 0) { Move-Item "$EPM_PATH_SCRIPTS\$Name*" -Destination "$Path" -Force -ErrorAction Ignore }
             $DLCount += 1
@@ -1163,8 +1163,8 @@ function EPM_Execute-LoadRule{
         [parameter(Mandatory=$true)][String]$StartPeriod,
         #[MANDATORY] Ending Period (DM Format, i.e. Oct-20 = October FY20)
         [parameter(Mandatory=$true)][String]$EndPeriod,
-        #[MANDATORY] Path to the Load file (including file)
-        [parameter(Mandatory=$true)][String]$Path,
+        #Path to the Load file (including file)
+        [String]$Path,
         #Will stop process on error
         [Switch]$StopOnError,
         #Import Mode to Use
@@ -1185,46 +1185,74 @@ function EPM_Execute-LoadRule{
     )
 
     $TaskStartTime = Get-Date
-    $FileName = "$($Path.Substring($Path.LastIndexOf('\')+1))"
-    $TaskName = "Executing Load of $FileName"
+    if ($Path) {
+        $TaskName = "Executing Load of $FileName"
+        $FileName = "$($Path.Substring($Path.LastIndexOf('\')+1))"
+        $LoadTask = "Loading $FileName via $LoadRule for $StartPeriod to $EndPeriod"
+    } else {
+        $TaskName = "Executing Load of $LoadRule"
+        $FileName = ""
+        $LoadTask = "Loading Data via $LoadRule for $StartPeriod to $EndPeriod"
+    }
+
     EPM_Log-Task -TaskName $TaskName -TaskStage START -TaskLevel $TaskLevel -ForceAdd
     $TaskID = ($global:EPM_TASK_LIST[-1].TASK_ID)
 
-    $LoadTask = "Loading $FileName via $LoadRule for $StartPeriod to $EndPeriod"
-    EPM_Upload-File -Path "$Path" -DataManagement -TaskLevel ($TaskLevel+1) -ParentID $TaskID
-    if ($LASTEXITCODE -ne 0) {
-        if ($StopOnError) {
-            EPM_Log-Task -TaskName $TaskName -TaskStage FINISH -TaskLevel $TaskLevel -TaskStatus ERROR -StartTime $TaskStartTime -UpdateTask $TaskID -StopOnError 
-        } else {
-            EPM_Log-Task -TaskName $TaskName -TaskStage FINISH -TaskLevel $TaskLevel -TaskStatus ERROR -StartTime $TaskStartTime -UpdateTask $TaskID
-            Return 1 | Out-Null
+    if ($Path) {
+        EPM_Upload-File -Path "$Path" -DataManagement -TaskLevel ($TaskLevel+1) -ParentID $TaskID
+        if ($LASTEXITCODE -ne 0) {
+            if ($StopOnError) {
+                EPM_Log-Task -TaskName $TaskName -TaskStage FINISH -TaskLevel $TaskLevel -TaskStatus ERROR -StartTime $TaskStartTime -UpdateTask $TaskID -StopOnError 
+            } else {
+                EPM_Log-Task -TaskName $TaskName -TaskStage FINISH -TaskLevel $TaskLevel -TaskStatus ERROR -StartTime $TaskStartTime -UpdateTask $TaskID
+                Return 1 | Out-Null
+            }
         }
     }
+    
     EPM_Execute-EPMATask -TaskName $LoadTask -TaskCommand "runDataRule" -TaskDetails ("$LoadRule $StartPeriod $EndPeriod $ImportMode $ExportMode $FileName") -TaskLevel ($TaskLevel+1) -ParentID $TaskID 
     $LastStatus = $LASTEXITCODE
     $LoadTaskID = ($global:EPM_TASK_LIST[-1].TASK_ID)
 
-    $DMError = 0
+    #$DMError = 0
     if ($LastStatus -ne 0) {
         #We had an error or kickouts, determine which.
         #Parse Log
         $ErrorLog = Get-ChildItem "$EPM_PATH_SCRIPTS" -Filter runDataRule*.log | Sort-Object LastWriteTime | Select-Object -Last 1
+        $throwError = $false
         if ($ErrorLog) {
-            $KickoutLog = [regex]::Match((Get-Content $ErrorLog.FullName),"`"logFileName`":`"([a-zA-Z\/\.\:\-_0-9]+)`"").Groups[1].Value
-            if ($KickoutLog){
-                $KickoutLog = $KickoutLog.Substring($KickoutLog.LastIndexOf('/')+1)
+            $DMLog = [regex]::Match((Get-Content $ErrorLog.FullName),"`"logFileName`":`"([a-zA-Z\/\.\:\-_0-9]+)`"").Groups[1].Value
+            if ($DMLog){
+                #Kickout Log Found
+                $DMLog = $DMLog.Substring($DMLog.LastIndexOf('/')+1)
+                $KickoutLog = $DMLog.Replace(".log",".out")
+                EPM_Get-File -Name $DMLog -Path $EPM_PATH_LOGS -TaskLevel ($TaskLevel+1) -ParentID $TaskID 
                 EPM_Get-File -Name $KickoutLog -Path $EPM_PATH_LOGS -TaskLevel ($TaskLevel+1) -ParentID $TaskID 
-                $DMError = EPM_Process-DataMgmtLog -Path "$EPM_PATH_LOGS\$KickoutLog" -TaskLevel ($TaskLevel+1) -ParentID $TaskID
-                $LoadID = $KickoutLog.Split("_")[1].Replace(".log","")
+
+                $LoadID = $DMLog.Substring($DMLog.LastIndexOf('/')+1).Split("_")[1].Replace(".log","")
+                $RuleName = [regex]::Match((Get-Content "$EPM_PATH_LOGS\$DMLog"),"Rule Name    : (.*? )").Groups[1].Value
+                $LoadFileName = [regex]::Match((Get-Content "$EPM_PATH_LOGS\$DMLog"),"File Name.*: (.*?txt)").Groups[1].Value
+
+                foreach ($line in Get-Content "$EPM_PATH_LOGS\$KickoutLog") {
+                    if($line.Contains("Error: 3303")) {
+                        $arrLine = $line.split("|")
+                        "$LoadID#$RuleName#$LoadFileName#$($arrLine[2].trim())#$($arrLine[3].trim())" | Add-Content -Path $EPM_LOG_KICKOUTS
+                    } elseif ($line.Contains("The member ")) {
+                        $member = [regex]::Match(($line),"(The member )(.*)( does not exist)").Groups[2].Value
+                        "$LoadID#$RuleName#$LoadFileName#$member#Not Available" | Add-Content -Path $EPM_LOG_KICKOUTS
+                    }
+                }
+                
+                EPM_Log-Task -TaskName $TaskName -TaskStage FINISH -TaskLevel $TaskLevel -TaskStatus WARNING -StartTime $TaskStartTime -UpdateTask $TaskID
+                EPM_Log-Task -TaskName $LoadTask -TaskStage FINISH -TaskLevel $TaskLevel -TaskStatus WARNING -StartTime $TaskStartTime -UpdateTask $LoadTaskID -OverrideError "Review Kickouts for Load ID : $LoadID" -NoLog
+            } else {
+                $throwError = $true
             }
+        } else {
+            $throwError = $true
         }
 
-        if ( ($DMError -gt 0) -and ($DMError -lt 99) ) {
-            #Kickouts
-            EPM_Log-Task -TaskName $TaskName -TaskStage FINISH -TaskLevel $TaskLevel -TaskStatus WARNING -StartTime $TaskStartTime -UpdateTask $TaskID
-            EPM_Log-Task -TaskName $LoadTask -TaskStage FINISH -TaskLevel $TaskLevel -TaskStatus WARNING -StartTime $TaskStartTime -UpdateTask $LoadTaskID -OverrideError "Review Kickouts for Load ID : $LoadID" -NoLog
-        } else {
-            #Fatal Errors
+        if ($throwError) {
             if ($StopOnError) {
                 EPM_Log-Task -TaskName $TaskName -TaskStage FINISH -TaskLevel $TaskLevel -TaskStatus ERROR -StartTime $TaskStartTime -UpdateTask $TaskID -StopOnError
             } else {
@@ -1235,142 +1263,6 @@ function EPM_Execute-LoadRule{
         EPM_Log-Task -TaskName $TaskName -TaskStage FINISH -TaskLevel $TaskLevel -TaskStatus SUCCESS -StartTime $TaskStartTime -UpdateTask $TaskID
     }
     
-}
-
-
-
-function EPM_Process-DataMgmtLog{
-<#
-    .SYNOPSIS
-    Uses EPMAutomate to parse the log provided
-    Parses the Log for Import & Export Errors and writes them to a LOG_KICKOUTS as well as the LOG_FULL
-    Will return a integer based on the outcome of parsing
-       0 = No Errors / Kickouts
-       1 = Import Errors
-       2 = Export Errors
-       3 = Import & Export Errors
-       99 = General / Fatal Error
-
-    .EXAMPLE
-    EPM_Process-DMGLog -LogPath "$EPM_PATH_LOGS\FINPLAN_1000.log"
-    Will parse the FINPLAN_1000.log from Data Management
-#>
-    Param(
-        #[MANDATORY] Name of the Log to Parse
-        [parameter(Mandatory=$true)][String]$Path,
-        #Level of Task Being Executed for Logging Purposes
-        [Int]$TaskLevel = 0,
-        #Turns off Logging
-        [Switch]$NoLog,
-        #Parent Task ID
-        [Int]$ParentID = 0
-    )
-
-    $CurFnc = EPM_Get-Function
-    
-    $TaskStartTime = Get-Date
-    $Name = "$($Path.Substring($Path.LastIndexOf('\')+1))"
-    $LogID = $Name.Split("_")[1].Replace(".log","")
-    $LoadFileName = [regex]::Match((Get-Content "$Path"),"File Name.*: (.*?txt)").Groups[1].Value
-    $RuleName = [regex]::Match((Get-Content "$Path"),"Rule Name    : (.*? )").Groups[1].Value
-    $TaskName = "Process Data Mgmt Log : $Name"
-    EPM_Log-Task -TaskName $TaskName -TaskStage START -TaskLevel $TaskLevel -ForceAdd -ParentID $ParentID
-    $TaskID = ($global:EPM_TASK_LIST[-1].TASK_ID)
-
-    if (Test-Path $Path) {
-        #Parse Log for Errors
-        $ErrImport = $false
-        $FirstRow = $true
-        foreach($line in Get-Content ($Path)) {
-            foreach($ErrorMsg in @("[BLANK]","[NN]","[TC]","[NULL ACCOUNT VALUE]","[ERROR_INVALID_PERIOD]")){
-                if($line.Contains($ErrorMsg)){
-                    if ($FirstRow) { 
-                        "" | EPM_Log-Item
-                        "[ IMPORT ERRORS ]" | EPM_Log-Item
-                        $FirstRow = $false
-                    }
-                    $ErrImport = $true
-                    $line.Substring($line.IndexOf($ErrorMsg)+1) | EPM_Log-Item
-                    #Write to Kickout File
-                    "$LogID#$RuleName#$LoadFileName#IMPORT#$($line.Substring($line.IndexOf($ErrorMsg)))" | Add-Content -Path $EPM_LOG_KICKOUTS
-                }
-            }
-        
-        }
-
-        $ErrExport = $false
-        $FirstRow = $true
-        foreach($line in Get-Content ($Path)) {
-            foreach($ErrorMsg in @("Error: 3303","The member")){
-                if($line.Contains($ErrorMsg)){
-                    if ($FirstRow) {
-                        "" | EPM_Log-Item
-                        "[ EXPORT ERRORS ]" | EPM_Log-Item 
-                        $FirstRow = $false
-                    }
-                    $ErrExport = $true
-                    $line.Substring($line.IndexOf($ErrorMsg)) | EPM_Log-Item
-                    #Write to Kickout File
-                    "$LogID#$RuleName#$LoadFileName#EXPORT#$($line.Substring($line.IndexOf($ErrorMsg)))" | Add-Content -Path $EPM_LOG_KICKOUTS
-                }
-            }
-        }
-        
-        $ErrGeneral = $false
-        $FirstRow = $true
-        foreach($line in Get-Content ($Path)) {
-            foreach($ErrorMsg in @(" ERROR "," FATAL ", " WARN ")){
-                if($line.Contains($ErrorMsg)){
-                    if ($FirstRow) { 
-                        "" | EPM_Log-Item
-                        "[ GENERAL ERRORS ]" | EPM_Log-Item
-                        $FirstRow = $false
-                    }
-                    $ErrGeneral = $true                    
-                    $line.Substring($line.IndexOf($ErrorMsg)) | EPM_Log-Item
-                }
-            }
-        }
-
-    } else {
-        Write-Verbose -Message "$CurFnc | Error in EPM_Get-File for $Name"
-    }
-
-    #Return Error Code
-    #   0 = No Errors / Kickouts
-    #   1 = Import Errors
-    #   2 = Export Errors
-    #   3 = Import & Export Errors
-    #   99 = General / Fatal Error
-
-    if ( $ErrImport -or $ErrExport -or $ErrGeneral) {
-        #Error was found
-
-        if ($ErrImport) {
-            if ($ErrExport) {
-                #Import & Export Errors
-                $RetVal = 3
-            } else {
-                #Import Errors Only
-                $RetVal = 1
-            }
-        } elseif ($ErrExport) {
-            #Export Errors Only
-            $RetVal = 2
-        } else {
-            #General / Fatal Error
-            $RetVal = 99
-        }
-
-    } else {
-        $RetVal = 0
-    }
-
-
-    EPM_Log-Task -TaskName $TaskName -TaskStage FINISH -TaskLevel $TaskLevel -TaskStatus SUCCESS -StartTime $TaskStartTime -ParentID $ParentID -UpdateTask $TaskID 
-
-    return $RetVal
-
 }
 
 

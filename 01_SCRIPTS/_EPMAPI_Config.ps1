@@ -5,8 +5,7 @@
 # -----------------------------------------------------------------------------------
 #   UTILITY IMPORTS
 # -----------------------------------------------------------------------------------
-#. "$PSScriptRoot\EPM_Modules\EPMAPI_Utils\EPM_APIUtils.ps1"
-Import-Module "$PSScriptRoot\EPM_Modules\EPMAPI_Utils\EPMAPI_Utils.psm1" -Force -WarningAction SilentlyContinue -DisableNameChecking
+Import-Module "$DIR_MODULES\EPMAPI_Utils\EPMAPI_Utils.psm1" -Force -WarningAction SilentlyContinue -DisableNameChecking
 
 Remove-Variable EPMAPI_*
 
