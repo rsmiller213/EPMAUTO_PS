@@ -89,6 +89,7 @@ $EPM_APP = ""
 $EPM_TASK_SEPARATOR = "=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-="
 $EPM_PROCESS_RUNNING_FLAG = "$EPM_PATH_SCRIPTS\$EPM_PROCESS-Running.flag"
 $global:EPM_TASK_LIST = @()
+$EPM_TASKLIST = New-EPMTaskList
 # Remove Error Log if Exists (would be from previous run)
 if (Test-Path $EPM_LOG_KICKOUTS) { Remove-Item $EPM_LOG_KICKOUTS }
 if (Test-Path $EPM_LOG_SECURITY) { Remove-Item $EPM_LOG_SECURITY }

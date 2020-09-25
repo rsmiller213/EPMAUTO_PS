@@ -10,20 +10,15 @@
 # -----------------------------------------------------------------------------------
 
 # Grab Config Variables
-. "$PSScriptRoot\_EPM_Config.ps1" -Process "FullProcess" -UseAPI -ExecEnvironment "TEST"
+. "$PSScriptRoot\_EPM_Config.ps1" -Process "FullProcess" -ExecEnvironment "TEST"
 
-#Ensure Clean Logs
-EPM_Start-Process
 
-# -----------------------------------------------------------------------------------
-#   MAIN TASKS
-# -----------------------------------------------------------------------------------
+#$Task1 = $TaskList.addTask(@{name = "Task 1"})
+#$Task2 = $TaskList.addTask(@{name = "Task 2"})
+#$Task21 = $TaskList.addTask(@{name = "Task 2.1"; level = 1; parentId = 2})
+#$TaskList.updateTask(3,@{status = "STARTING"})
 
-# Put Script Tasks Here
-
-# -----------------------------------------------------------------------------------
-#   FINISHING TASKS
-# -----------------------------------------------------------------------------------
-
-#Close and Archive Log
-EPM_End-Process -NotifyLevel SUCCESS
+$Task1 = $EPM_TASKLIST.addTask(@{name = "Hey";status = "STARTING"})
+Start-Sleep -Seconds 5
+$Task1.updateTask(@{status="SUCCESS"})
+$EPM_TASKLIST.Tasks | ForEach-Object{$_.display()}

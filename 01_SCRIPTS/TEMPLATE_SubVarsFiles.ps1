@@ -4,7 +4,6 @@
 #   Purpose : Main Processing Script
 # ===================================================================================
 
-
 # -----------------------------------------------------------------------------------
 #   STARTING TASKS
 # -----------------------------------------------------------------------------------
@@ -21,22 +20,19 @@ EPM_Start-Process
 
 #Sub Var Testing
 # -- Get Variables
-$SV_EPMAutoTest = EPM_Get-SubVar -Name "EPMAutomate_TestingVar" -KeepQuotes
-
-# -- Set Variables
-EPM_Set-SubVar -Name "EPMAutomate_TestingVar" -Value "AutoTest_Run2" -WrapQuotes
-
-# Export All Variables to custom file
-EPM_Export-SubVars -Path "$EPM_PATH_FILES_OUT\SubVarTesting.txt"
-
+$SV = EPM_Export-SubVars
+"Before : $($SV.ALL.EPMAutomate_TestingVar)" | EPM_Log-Item -WriteHost
+# -- Set Variables & Re-Export
+$SV = EPM_Set-SubVar -Name "EPMAutomate_TestingVar" -Value "AutoTest_Run$(Get-Random -Maximum 10)" -WrapQuotes
+"After : $($SV.ALL.EPMAutomate_TestingVar)" | EPM_Log-Item  -WriteHost
 
 #File Testing
 # -- Upload
-EPM_Upload-File -Path "$EPM_PATH_FILES_IN\Testing_General.txt"
 EPM_Upload-File -Path "$EPM_PATH_FILES_IN\TEST_DM_NUMERIC.txt" -DataManagement
+# -- Upload Error
+EPM_Upload-File -Path "$EPM_PATH_FILES_IN\TEST_DM_NUMERIC2.txt" -DataManagement
 
 # -- Download
-EPM_Get-File -Name "Testing_General.txt"
 EPM_Get-File -Name "TEST_DM_NUMERIC.txt" -Path "$EPM_PATH_AUTO\ZZ_Testing" 
 EPM_Get-File -Name "FileDoesNotExist.txt"
 
@@ -45,4 +41,4 @@ EPM_Get-File -Name "FileDoesNotExist.txt"
 # -----------------------------------------------------------------------------------
 
 #End Processing, Archive Logs, Send Notification
-EPM_End-Process -NotifyLevel SUCCESS
+EPM_End-Process -NotifyLevel "SUCCESS"
