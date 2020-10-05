@@ -9,15 +9,21 @@ Param(
 
 
 $DIR_WORKING = Split-Path -Path $PSScriptRoot -Parent
-$DIR_MODULES = "$DIR_WORKING\01_SCRIPTS\EPM_Modules"
+$DIR_MODULES = "$DIR_WORKING\00_Modules"
 Set-Location -Path "$DIR_WORKING\01_SCRIPTS"
 
 # -----------------------------------------------------------------------------------
 #   UTILITY IMPORTS
 # -----------------------------------------------------------------------------------
-Import-Module "$DIR_MODULES\EPM_Utils\EPM_Utils.psm1" -Force -WarningAction SilentlyContinue -DisableNameChecking
+#Import-Module "$DIR_MODULES\EPM_Utils\EPM_Utils.psm1" -Force -WarningAction SilentlyContinue -DisableNameChecking
+ForEach ($module in (Get-ChildItem -Path "$DIR_MODULES\*.psm1" -Recurse -Force)){
+    Unblock-File -Path $module.fullname
+    Import-Module $module.fullname -Force -WarningAction SilentlyContinue -DisableNameChecking
+}
 
+# Ensure Clean Variables
 Remove-Variable EPM_*
+Remove-Variable EPMAPI_*
 Remove-Variable SV_*
 
 # -----------------------------------------------------------------------------------
@@ -41,7 +47,9 @@ $EPM_PATH_BACKUPS = "$EPM_PATH_AUTO\04_BACKUPS"
 $EPM_PATH_ARCHIVES = "$EPM_PATH_AUTO\05_ARCHIVE"
 $EPM_PATH_CURRENT_ARCHIVE = $EPM_PATH_ARCHIVES + "\" + $EPM_FILE_STAMP + "_" + $EPM_PROCESS
 # -- Default Log / Files
+$EPM_LOG_LEVEL = "VERBOSE"
 $EPM_LOG_FULL = "$EPM_PATH_LOGS\LOG_FULL.log"
+$EPM_LOG_ERROR = "$EPM_PATH_LOGS\LOG_ERRORS.log"
 $EPM_LOG_KICKOUTS = "$EPM_PATH_LOGS\LOG_KICKOUTS.log"
 $EPM_LOG_SECURITY = "$EPM_PATH_LOGS\SecurityErrors.csv"
 $EPM_FILE_LISTFILES = "$EPM_PATH_LOGS\listfiles.txt"
@@ -77,10 +85,10 @@ if ($EPM_ENV -eq "PROD") {
 # -----------------------------------------------------------------------------------
 #   USE EPM API
 # -----------------------------------------------------------------------------------
-if ($useAPI) {
-    . "$EPM_PATH_SCRIPTS\_EPMAPI_Config.ps1"
-}
-$EPMAPI_USED = $UseAPI
+#if ($useAPI) {
+#    . "$EPM_PATH_SCRIPTS\_EPMAPI_Config.ps1"
+#}
+#$EPMAPI_USED = $UseAPI
 
 # -----------------------------------------------------------------------------------
 #   OTHER
@@ -88,12 +96,10 @@ $EPMAPI_USED = $UseAPI
 $EPM_APP = ""
 $EPM_TASK_SEPARATOR = "=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-="
 $EPM_PROCESS_RUNNING_FLAG = "$EPM_PATH_SCRIPTS\$EPM_PROCESS-Running.flag"
-$global:EPM_TASK_LIST = @()
 $EPM_TASKLIST = New-EPMTaskList
 # Remove Error Log if Exists (would be from previous run)
 if (Test-Path $EPM_LOG_KICKOUTS) { Remove-Item $EPM_LOG_KICKOUTS }
 if (Test-Path $EPM_LOG_SECURITY) { Remove-Item $EPM_LOG_SECURITY }
-
 
 # -----------------------------------------------------------------------------------
 #   NOTIFICATION SETUP

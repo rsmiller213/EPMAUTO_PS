@@ -67,7 +67,7 @@ function EPM_Start-Process{
         "" | EPM_Log-Item -Clean -IncludeSeparator
     
         #Login
-        if(-not($NoLogin)) {EPM_Execute-EPMATask -TaskName "EPM Automate Login" -TaskCommand "login" -TaskDetails "$EPM_USER $EPM_PASSFILE $EPM_URL $EPM_DOMAIN" -StopOnError}
+        if(-not($NoLogin)) {EPM_Execute-EPMATask -TaskName "EPM Automate Login $EPM_ENV" -TaskCommand "login" -TaskDetails "$EPM_USER $EPM_PASSFILE $EPM_URL $EPM_DOMAIN" -StopOnError}
     }
     
     
@@ -93,7 +93,7 @@ function EPM_End-Process{
         )
     
         #Logout of EPM Automate
-        if(-not($NoLogout)) {EPM_Execute-EPMATask -TaskName "EPM Automate Logout" -TaskCommand "logout" -IgnoreError}
+        if(-not($NoLogout)) {EPM_Execute-EPMATask -TaskName "EPM Automate Logout $EPM_ENV" -TaskCommand "logout" -IgnoreError}
     
         #Write Ending Sequence to the Full Log
         "ELAPSED TIME : $(EPM_Get-ElapsedTime -StartTime $EPM_PROCESS_START)" | EPM_Log-Item -Clean

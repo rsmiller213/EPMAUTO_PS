@@ -415,7 +415,7 @@ function EPM_Move-FileToInstance{
             -TaskName "Log into $TargetEnv for File Move" `
             -TaskCommand "login" `
             -TaskDetails "$TargetUser $TargetPassfile $TargetURL $EPM_DOMAIN" `
-            -TaskLevel ($Task.level + 1) 
+            -TaskLevel ($Task.level + 1) `
             -ParentID ($Task.id) `
             -HideTask:$HideTask `
             -StopOnError 
@@ -426,7 +426,7 @@ function EPM_Move-FileToInstance{
         -TaskName "Delete $FileName from $TargetEnv" `
         -TaskCommand "deleteFile" `
         -TaskDetails "$FileName" `
-        -TaskLevel ($Task.level + 1)  `
+        -TaskLevel ($Task.level + 1) `
         -ParentID ($Task.id) `
         -HideTask:$HideTask `
         -IgnoreError
@@ -456,7 +456,8 @@ function EPM_Move-FileToInstance{
     if ($EPM_ENV -eq $SourceEnv) {
         EPM_Execute-EPMATask `
             -TaskName "Logout of $TargetEnv to restore access to $SourceEnv" `
-            -TaskLevel ($Task.level + 1)  `
+            -TaskCommand "logout" `
+            -TaskLevel ($Task.level + 1) `
             -ParentID ($Task.id) `
             -HideTask:$HideTask
         EPM_Execute-EPMATask `
