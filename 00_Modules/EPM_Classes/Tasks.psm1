@@ -1,9 +1,9 @@
 Class Task {
     [int]$id
-    [int]$parentId
+    [int]$parentId = 0
     [String]$name
-    [ValidateSet("STARTING","SUCCESS","ERROR","WARNING","IGNORED")][String]$status
-    [int]$level
+    [ValidateSet("STARTING","SUCCESS","ERROR","WARNING","IGNORED")][String]$status = "STARTING"
+    [int]$level = 0
     [String]$type
     [String]$command
     [String]$details
@@ -12,10 +12,8 @@ Class Task {
     [TimeSpan]$elapsedTime
     [String]$errorMsg
     [String]$function
-    [String]$arguments
-    [String]$callerFunction
-    [String]$callerLocation
-    [Boolean]$hideTask
+    $callstack = @()
+    [Boolean]$hideTask = $false
 
     updateTask([Hashtable]$properties,[Boolean]$hidden){
         ForEach($item in $properties.keys){
@@ -68,9 +66,10 @@ Class Task {
                 "[COMMAND] : $($this.command) $($this.details)" | EPM_Log-Item
             }
             "[FUNCTION] : $($this.function)" | EPM_Log-Item
-            "[ARGUMENTS] : $($this.arguments)" | EPM_Log-Item
-            "[CALLER FUNCTION] : $($this.callerFunction)" | EPM_Log-Item
-            "[CALLER LOCATION] : $($this.callerLocation)" | EPM_Log-Item
+            if ($this.callstack.Count -gt 1) {
+                "[CALL STACK] : " | EPM_Log-Item
+                ForEach ($item in $this.callstack) {"   $($item.trim())" | EPM_Log-Item}
+            }
             if ( ($this.command) -or ($this.details)){
                 "[COMMAND OUTPUT]" | EPM_Log-Item
             }
@@ -148,10 +147,33 @@ Class TaskList {
         } else {
             $type = "SUB-TASK"
         }
+
+        $FullStack = (Get-PSCallStack)
+        If ($FullStack[2].FunctionName -eq "<ScriptBlock>") {
+            $Function = "$($FullStack[$FullStack.Count-1].Location)"
+        } else {
+            $Function = "$($FullStack[2].FunctionName) | ARGS : $($FullStack[2].Arguments)"
+        }
+
+        $CallStack = @()
+        For ($i = 2; $i -lt $FullStack.Count; $i++){
+            if ($FullStack[$i].FunctioNName -eq "<ScriptBlock>") {
+                $CallStack += "$($FullStack[$i].Location)"
+            } else {
+                $CallStack += "$($FullStack[$i].FunctionName) | $($FullStack[$i].Location)"
+            }
+            
+        }
         
+        #Write-Host -ForegroundColor Yellow "$Function"
+       #Write-Host -ForegroundColor Yellow "$CallStack"
+
+
         $task.updateTask(@{
             id = $id;
             type = $type;
+            function = $Function;
+            callstack = $CallStack;
         },$hidden)
         $this.Tasks += $task
         return $task

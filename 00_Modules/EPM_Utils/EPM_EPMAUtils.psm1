@@ -68,20 +68,13 @@ function EPM_Execute-EPMATask{
         break
     }
 
-    $Invo = EPM_Get-Invoker
-
     $Task = $EPM_TASKLIST.addTask(@{
         name = $TaskName;
         command = $TaskCommand;
         details = $TaskDetails;
-        status = "STARTING";
         level = $TaskLevel;
         parentId = $ParentID;
         hideTask = $HideTask;
-        function = ($Invo.FunctionName);
-        arguments = ($Invo.Arguments)
-        callerFunction = ($Invo.CallerFunction);
-        callerLocation = ($Invo.CallerLocation);
     })
 
     # Execute Command
@@ -378,17 +371,11 @@ function EPM_Move-FileToInstance{
         [Int]$TaskLevel = 0
     )
 
-    $Invo = EPM_Get-Invoker
     $Task = $EPM_TASKLIST.addTask(@{
         name = "Moving File $FileName from $SourceEnv to $TargetEnv";
-        status = "STARTING";
         level = $TaskLevel;
         parentId = $ParentID;
         hideTask = $HideTask;
-        function = ($Invo.FunctionName);
-        arguments = ($Invo.Arguments)
-        callerFunction = ($Invo.CallerFunction);
-        callerLocation = ($Invo.CallerLocation);
     })
 
     # Set Proper URLs
@@ -533,17 +520,11 @@ function EPM_Execute-LoadRule{
         $LoadTaskName = "Loading Data via $LoadRule for $StartPeriod to $EndPeriod"
     }
 
-    $Invo = EPM_Get-Invoker
     $Task = $EPM_TASKLIST.addTask(@{
         name = $TaskName;
-        status = "STARTING";
         level = $TaskLevel;
         parentId = $ParentID;
         hideTask = $HideTask;
-        function = ($Invo.FunctionName);
-        arguments = ($Invo.Arguments)
-        callerFunction = ($Invo.CallerFunction);
-        callerLocation = ($Invo.CallerLocation);
     })
 
     if ( $Path ) {
@@ -689,17 +670,11 @@ function EPM_Backup-Application{
     )
 
     if ($New) {
-        $Invo = EPM_Get-Invoker
         $Task = $EPM_TASKLIST.addTask(@{
             name = "Backup $EPM_FINPLAN in $EPM_ENV";
-            status = "STARTING";
             level = $TaskLevel;
             parentId = $ParentID;
             hideTask = $HideTask;
-            function = ($Invo.FunctionName);
-            arguments = ($Invo.Arguments)
-            callerFunction = ($Invo.CallerFunction);
-            callerLocation = ($Invo.CallerLocation);
         })
 
     
@@ -930,17 +905,11 @@ function EPM_Export-Security{
     }
 
     #Process Security
-    $Invo = EPM_Get-Invoker
     $Task = $EPM_TASKLIST.addTask(@{
         name = "Exporting Security to $($PathWithFileName.Replace($EPM_PATH_AUTO,''))";
-        status = "STARTING";
         level = $TaskLevel;
         parentId = $ParentID;
         hideTask = $HideTask;
-        function = ($Invo.FunctionName);
-        arguments = ($Invo.Arguments)
-        callerFunction = ($Invo.CallerFunction);
-        callerLocation = ($Invo.CallerLocation);
     })
 
 
@@ -1025,17 +994,11 @@ function EPM_Import-Security{
     )
 
     #Process Security
-    $Invo = EPM_Get-Invoker
     $Task = $EPM_TASKLIST.addTask(@{
         name = "Import Security from $($ImportFile.Replace($EPM_PATH_AUTO,''))";
-        status = "STARTING";
         level = $TaskLevel;
         parentId = $ParentID;
         hideTask = $HideTask;
-        function = ($Invo.FunctionName);
-        arguments = ($Invo.Arguments)
-        callerFunction = ($Invo.CallerFunction);
-        callerLocation = ($Invo.CallerLocation);
     })
 
     $OrigSecurity = "$(EPM_Get-TimeStamp -StampType FILE)_OriginalSecurity.csv"
@@ -1053,17 +1016,11 @@ function EPM_Import-Security{
         $Task.updateTask(@{status = "ERROR"})
     } else {
         #Export Success
-        $Invo = EPM_Get-Invoker
         $ImportTask = $EPM_TASKLIST.addTask(@{
             name = "Import New Security";
-            status = "STARTING";
             level = ($Task.level + 1);
             parentId = ($Task.id);
             hideTask = $HideTask;
-            function = ($Invo.FunctionName);
-            arguments = ($Invo.Arguments)
-            callerFunction = ($Invo.CallerFunction);
-            callerLocation = ($Invo.CallerLocation);
         })
         #Upload New Security File
         EPM_Upload-File `

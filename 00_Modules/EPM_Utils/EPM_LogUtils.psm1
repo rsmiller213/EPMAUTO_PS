@@ -109,58 +109,7 @@ filter EPM_Log-Item{
             if ($IncludeSeparator) {"$EPM_TASK_SEPARATOR" | Add-Content -Path $LogFile}
             if ($WriteHost) {Write-Host $message -ForegroundColor $HostColor}
         }
-    }
-    
-    
-function EPM_Get-Invoker{
-        #Write-Host ((Get-PSCallStack)[1] | Select-Object -Property Command,FunctionName,ScriptLineNumber,ScriptName,Location)
-        #Write-Host (Get-PSCallStack)
-        #ForEach ($stack in (Get-PSCallStack)){
-            #Write-Host ("Name : $($stack.FunctionName) | ScriptLineNumber : $($stack.ScriptLineNumber) | Arguments : $($stack.Arguments) | ScriptName : $($stack.ScriptName)")
-         #   Write-Host ("Name : $($stack.FunctionName) | ScriptLineNumber : $($stack.ScriptLineNumber) | Location : $($stack.Location) | Position : $($stack.Position)")
-        #}
-
-        $FullStack = (Get-PSCallStack)
-        $Debug = [ordered]@{
-            FunctionName = ($FullStack[1].FunctionName);
-            Arguments = ($FullStack[1].Arguments);
-            CallerFunction = ($FullStack[2].FunctionName);
-            CallerLocation = ($FullStack[2].Location);
-        }
-        return $Debug
-        #Write-Host ("Name : $($stack.FunctionName) | Location : $($stack.Location)")
-
-        
-
-    }
-
-    
-function EPM_Get-Function{
-    <#
-        .SYNOPSIS
-        Will return the current executing function
-    
-        .EXAMPLE
-        $CurFnc = EPM_Get-Function
-        Will return the name of the current executing function
-    #>
-        param(
-            #Return parent function
-            [Switch]$Parent
-        )
-    
-        #Write-Host ((Get-Variable MyInvocation -Scope 0).Value.MyCommand.Name)
-        #Write-Host ((Get-Variable MyInvocation -Scope 1).Value.MyCommand.Name)
-        #Write-Host ((Get-Variable MyInvocation -Scope 2).Value.MyCommand.Name)
-        #Write-Host ((Get-Variable MyInvocation -Scope 1) | Format-List)
-        #($MyInvocation | Select-Object * | Format-List) | EPM_Log-Item -WriteHost
-        if ($Parent) {
-            return ((Get-Variable MyInvocation -Scope 2).Value.MyCommand.Name)
-        } else {
-            return ((Get-Variable MyInvocation -Scope 1).Value.MyCommand.Name)
-        }
-    }
-    
+    }    
     
     
 function EPM_Get-ElapsedTime{

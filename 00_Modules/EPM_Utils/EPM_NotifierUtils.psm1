@@ -27,7 +27,7 @@ function EPM_Send-Notification{
     
         #Check if Errors / Warning Exist
         $ErrCount = $EPM_TASKLIST.countTasks("status","ERROR")
-        $WarnCount = $EPM_TASKLIST.countTasks("status","ERROR")
+        $WarnCount = $EPM_TASKLIST.countTasks("status","WARNING")
        
         # ==================================
         # Build Email Body
@@ -121,7 +121,7 @@ function EPM_Send-Notification{
         $ErrorTable += "`n<caption style='$TitleStyle'>ERROR SUMMARY</caption>"
         #Build Error Table Header
         $ErrorTable += "`n   <tr>"
-        ForEach($hdr in @("Task ID","Status","Task Command","Command Details","Error Message")){
+        ForEach($hdr in @("Task ID","Status","Task Command","Command Details","Error Message","Call Stack")){
             $ErrorTable += "`n    <th style='$HeaderStyle text-align: center;'>$hdr</th>"
         }
         $ErrorTable += "`n   </tr>"
@@ -145,6 +145,12 @@ function EPM_Send-Notification{
                     $PoT = ""
                 }
 
+                $cstack = ""
+                ForEach($item in $task.callstack){
+                    $cstack += "$item<br>"
+                }
+                
+
                 $TaskTable += "`n   <tr>`n      <td style='$CellStyle text-align: center;'>$($task.id)</td>"
                 $TaskTable += "`n      <td style='$CellStyle background: $StatusColor; text-align: center;'>$($task.status)</td>"
                 $TaskTable += "`n      <td style='$CellStyle font-weight:bold; $indentColor'>$("&nbsp;&nbsp;" * $task.level)$($task.name)</td>"
@@ -160,6 +166,7 @@ function EPM_Send-Notification{
                     $ErrorTable += "`n      <td style='$CellStyle text-align: center;'>$($task.command)</td>"
                     $ErrorTable += "`n      <td style='$CellStyle text-align: left;'>$($task.details)</td>"
                     $ErrorTable += "`n      <td style='$CellStyle text-align: left;'>$($task.errorMsg)</td>"
+                    $ErrorTable += "`n      <td style='$CellStyle text-align: left;'>$cstack</td>"
                     $ErrorTable += "`n   </tr>"
                 }
             }
@@ -247,6 +254,7 @@ function EPM_Send-Notification{
     
     
         $EmailBody += "`n</body></html>"
+        $EmailBody = $EmailBody.replace("$EPM_PATH_AUTO","")
     
         # ==================================
         # Build Email Subject
