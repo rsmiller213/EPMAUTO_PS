@@ -23,9 +23,9 @@ if ($Ans -notlike 'y*') {
 
 # Grab Config Variables
 Write-Host -ForegroundColor Yellow "Grabbing configuration, you may be prompted to enter a password for the user defined which will then be encrypted"
-. "$PSScriptRoot\_EPM_Config.ps1" -Process "Setup" -UseAPI -ExecEnvironment "TEST"
+. "$PSScriptRoot\_EPM_Config.ps1" -Process "Setup" -ExecEnvironment "TEST"
 
-Get-Variable EPM_ENV,EPM_PROCESS,EPM_USER,EPM_PASSFILE,EPM_DOMAIN,EPM_DATACENTER,EPM_URL,EPM_LOG_ERROR,EPM_LOG_FULL,EPM_PATH_CURRENT_ARCHIVE,EPMAPI_PASSFILE,EPMAPI_PLN_BASE_URI,EPMAPI_MIG_BASE_URI,EPMAPI_DMG_BASE_URI
+Get-Variable EPM_ENV,EPM_PROCESS,EPM_USER,EPM_PASSFILE,EPM_DOMAIN,EPM_DATACENTER,EPM_URL,EPM_LOG_ERROR,EPM_LOG_FULL,EPM_PATH_CURRENT_ARCHIVE
 
 
 Write-Host -ForegroundColor Yellow "`nTesting for Pass Files"
@@ -33,12 +33,6 @@ if (Test-Path $EPM_PASSFILE.Replace('"','')) {
     Write-Host -ForegroundColor Green "   $($EPM_PASSFILE.Replace('"','')) Found!" 
 } else { 
     Write-Host -ForegroundColor Red "   $($EPM_PASSFILE.Replace('"','')) Not Found!"
-    break
-}
-if (Test-Path $EPMAPI_PASSFILE) { 
-    Write-Host -ForegroundColor Green "   $EPMAPI_PASSFILE Found!" 
-} else { 
-    Write-Host -ForegroundColor Red "   $EPMAPI_PASSFILE Not Found!"
     break
 }
 
