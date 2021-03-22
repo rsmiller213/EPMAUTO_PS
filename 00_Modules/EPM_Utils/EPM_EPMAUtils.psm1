@@ -389,17 +389,17 @@ function EPM_Move-FileToInstance{
     }
 
     #Check Current Environment & Login if necessary
-    if ( $EPM_ENV -ne $TargetEnv ) {
+    if ( $EPM_URL -ne $TargetURL ) {
         # Logout 
         EPM_Execute-EPMATask `
-            -TaskName "Logout of $EPM_ENV for File Move" `
+            -TaskName "Logout of $EPM_URL for File Move" `
             -TaskCommand "logout" `
             -TaskLevel ($Task.level + 1) `
             -ParentID ($Task.id) `
             -HideTask:$HideTask
         # Login to Target Env
         EPM_Execute-EPMATask `
-            -TaskName "Log into $TargetEnv for File Move" `
+            -TaskName "Log into $TargetURL for File Move" `
             -TaskCommand "login" `
             -TaskDetails "$TargetUser $TargetPassfile $TargetURL $EPM_DOMAIN" `
             -TaskLevel ($Task.level + 1) `
@@ -410,7 +410,7 @@ function EPM_Move-FileToInstance{
 
     #Delete from Target
     EPM_Execute-EPMATask `
-        -TaskName "Delete $FileName from $TargetEnv" `
+        -TaskName "Delete $FileName from $TargetURL" `
         -TaskCommand "deleteFile" `
         -TaskDetails "$FileName" `
         -TaskLevel ($Task.level + 1) `
@@ -421,7 +421,7 @@ function EPM_Move-FileToInstance{
     #Move File
     if ($IsSnapshot) {
         EPM_Execute-EPMATask `
-            -TaskName "Moving Snapshot $FileName From $SourceEnv To $TargetEnv" `
+            -TaskName "Moving Snapshot $FileName From $SourceURL To $TargetURL" `
             -TaskCommand "copySnapshotFromInstance" `
             -TaskDetails "$FileName $SourceUser $SourcePassfile $SourceURL $EPM_DOMAIN" `
             -TaskLevel ($Task.level + 1)  `
@@ -430,7 +430,7 @@ function EPM_Move-FileToInstance{
             -StopOnError
     } else {
         EPM_Execute-EPMATask `
-            -TaskName "Moving File $FileName From $SourceEnv To $TargetEnv" `
+            -TaskName "Moving File $FileName From $SourceURL To $TargetURL" `
             -TaskCommand "copyFileFromInstance" `
             -TaskDetails "$FileName $SourceUser $SourcePassfile $SourceURL $EPM_DOMAIN $FileName" `
             -TaskLevel ($Task.level + 1)  `
@@ -440,15 +440,15 @@ function EPM_Move-FileToInstance{
     }
 
     # Return login status to what it was before
-    if ($EPM_ENV -eq $SourceEnv) {
+    if ($EPM_URL -eq $SourceURL) {
         EPM_Execute-EPMATask `
-            -TaskName "Logout of $TargetEnv to restore access to $SourceEnv" `
+            -TaskName "Logout of $TargetURL to restore access to $SourceURL" `
             -TaskCommand "logout" `
             -TaskLevel ($Task.level + 1) `
             -ParentID ($Task.id) `
             -HideTask:$HideTask
         EPM_Execute-EPMATask `
-            -TaskName "Restore Access to $SourceEnv" `
+            -TaskName "Restore Access to $SourceURL" `
             -TaskCommand "login" `
             -TaskDetails "$SourceUser $SourcePassfile $SourceURL $EPM_DOMAIN" `
             -TaskLevel ($Task.level + 1)  `
@@ -462,192 +462,196 @@ function EPM_Move-FileToInstance{
 
 
 function EPM_Execute-LoadRule{
-<#
-    .SYNOPSIS
-    Will execute a Data Mgmt load rule and download 
-        the log after completion and parse for kickouts
-
-    .EXAMPLE
-    EPM_Execute-LoadRule `
-        -LoadRule "LR_OP_TEST_NUM" `
-        -StartPeriod "Oct-15" `
-        -EndPeriod "Mar-16" `
-        -Path "$EPM_PATH_FILES_IN\TEST_DM_NUMERIC.txt"
-#>
-    param(
-        #[MANDATORY] Name of the Load Rule
-        [parameter(Mandatory=$true)][String]$LoadRule,
-        #[MANDATORY] Starting Period (DM Format, i.e. Oct-20 = October FY20)
-        [parameter(Mandatory=$true)][String]$StartPeriod,
-        #[MANDATORY] Ending Period (DM Format, i.e. Oct-20 = October FY20)
-        [parameter(Mandatory=$true)][String]$EndPeriod,
-        #Path to the Load file (including file)
-        [String]$Path,
-        #Import Mode to Use
-        #   REPLACE - Will delete & replace all DM staging records
-        #   APPEND - Will add the records to DM Staging
-        #   RECALCULATE - Skip the import, but re-run the mappings
-        #   NONE - Skip the import & do NOT re-run the mappings
-        [ValidateSet("REPLACE","APPEND","RECALCULATE","NONE")]
-        [String]$ImportMode = "REPLACE",
-        #Export Mode to Use
-        #   STORE_DATA - Will overwrite existing data with new data
-        #   ADD_DATA - Will add new data to existing in essbase
-        #   SUBTRACT_DATA - Will subtract the new data from existing in essbase
-        #   REPLACE_DATA - Will clear existing data before importing new
-        #       NOTE : By defualt will clear the POV (Scenario, Version, Year, Period, Entity) 
-        #              You should specify a "Clear Region" in load rule options
-        #   NONE - Skip the export
-        [ValidateSet("STORE_DATA","ADD_DATA","SUBTRACT_DATA","REPLACE_DATA","NONE")]
-        [String]$ExportMode = "STORE_DATA",
-        #Hides the Task from Console
-        [Switch]$HideTask,
-        #Stops on Error
-        [Switch]$StopOnError,
-        #Level of Task Being Executed for Logging Purposes
-        [Int]$TaskLevel = 0,
-        #Parent Task ID
-        [Int]$ParentID = 0
-    )
-    if ($Path) {
-        $HasParentTask = $true
-        $FileName = "$($Path.Substring($Path.LastIndexOf('\')+1))"
-        $TaskName = "Uploading $FileName and Executing Load of $LoadRule"
-        $LoadTaskName = "Loading Data via $LoadRule for $StartPeriod to $EndPeriod"
-
-        $Task = $EPM_TASKLIST.addTask(@{
-            name = $TaskName;
-            level = $TaskLevel;
-            parentId = $ParentID;
-            hideTask = $HideTask;
-        })
-
-        $NewTaskLevel = ($Task.level + 1)
-        $NewParentID = ($Task.id)
-
-        # Path Specified, need to upload file
-        EPM_Upload-File `
-            -Path "$Path" `
+    <#
+        .SYNOPSIS
+        Will execute a Data Mgmt load rule and download 
+            the log after completion and parse for kickouts
+    
+        .EXAMPLE
+        EPM_Execute-LoadRule `
+            -LoadRule "LR_OP_TEST_NUM" `
+            -StartPeriod "Oct-15" `
+            -EndPeriod "Mar-16" `
+            -Path "$EPM_PATH_FILES_IN\TEST_DM_NUMERIC.txt"
+    #>
+        param(
+            #[MANDATORY] Name of the Load Rule
+            [parameter(Mandatory=$true)][String]$LoadRule,
+            #[MANDATORY] Starting Period (DM Format, i.e. Oct-20 = October FY20)
+            [parameter(Mandatory=$true)][String]$StartPeriod,
+            #[MANDATORY] Ending Period (DM Format, i.e. Oct-20 = October FY20)
+            [parameter(Mandatory=$true)][String]$EndPeriod,
+            #Path to the Load file (including file)
+            [String]$Path,
+            #Import Mode to Use
+            #   REPLACE - Will delete & replace all DM staging records
+            #   APPEND - Will add the records to DM Staging
+            #   RECALCULATE - Skip the import, but re-run the mappings
+            #   NONE - Skip the import & do NOT re-run the mappings
+            [ValidateSet("REPLACE","APPEND","RECALCULATE","NONE")]
+            [String]$ImportMode = "REPLACE",
+            #Export Mode to Use
+            #   STORE_DATA - Will overwrite existing data with new data
+            #   ADD_DATA - Will add new data to existing in essbase
+            #   SUBTRACT_DATA - Will subtract the new data from existing in essbase
+            #   REPLACE_DATA - Will clear existing data before importing new
+            #       NOTE : By defualt will clear the POV (Scenario, Version, Year, Period, Entity) 
+            #              You should specify a "Clear Region" in load rule options
+            #   NONE - Skip the export
+            [ValidateSet("STORE_DATA","ADD_DATA","SUBTRACT_DATA","REPLACE_DATA","NONE")]
+            [String]$ExportMode = "STORE_DATA",
+            #Hides the Task from Console
+            [Switch]$HideTask,
+            #Stops on Error
+            [Switch]$StopOnError,
+            #Level of Task Being Executed for Logging Purposes
+            [Int]$TaskLevel = 0,
+            #Parent Task ID
+            [Int]$ParentID = 0
+        )
+        if ($Path) {
+            $HasParentTask = $true
+            $FileName = "$($Path.Substring($Path.LastIndexOf('\')+1))"
+            $TaskName = "Uploading $FileName and Executing Load of $LoadRule"
+            $LoadTaskName = "Loading Data via $LoadRule for $StartPeriod to $EndPeriod"
+    
+            $Task = $EPM_TASKLIST.addTask(@{
+                name = $TaskName;
+                level = $TaskLevel;
+                parentId = $ParentID;
+                hideTask = $HideTask;
+            })
+    
+            $NewTaskLevel = ($Task.level + 1)
+            $NewParentID = ($Task.id)
+    
+            # Path Specified, need to upload file
+            EPM_Upload-File `
+                -Path "$Path" `
+                -TaskLevel $NewTaskLevel  `
+                -ParentID $NewParentID `
+                -HideTask:$HideTask `
+                -DataManagement
+            if ( $LASTEXITCODE -ne 0 ) {
+                $Task.updateTask(@{status = "ERROR"})
+                #Exit Load Process
+                Return 1 | Out-Null
+            }
+    
+        } else {
+            $HasParentTask = $false
+            $FileName = ""
+            $TaskName = "Executing Load of $LoadRule"
+            $LoadTaskName = "Loading Data via $LoadRule for $StartPeriod to $EndPeriod"
+    
+            $NewTaskLevel = $TaskLevel
+            $NewParentID = $ParentID
+        }
+    
+        #Execute Load
+        EPM_Execute-EPMATask `
+            -TaskName $LoadTaskName `
+            -TaskCommand "runDataRule" `
+            -TaskDetails ("$LoadRule $StartPeriod $EndPeriod $ImportMode $ExportMode $FileName") `
             -TaskLevel $NewTaskLevel  `
             -ParentID $NewParentID `
-            -HideTask:$HideTask `
-            -DataManagement
-        if ( $LASTEXITCODE -ne 0 ) {
-            $Task.updateTask(@{status = "ERROR"})
-            #Exit Load Process
-            Return 1 | Out-Null
-        }
-
-    } else {
-        $HasParentTask = $false
-        $FileName = ""
-        $TaskName = "Executing Load of $LoadRule"
-        $LoadTaskName = "Loading Data via $LoadRule for $StartPeriod to $EndPeriod"
-
-        $NewTaskLevel = $TaskLevel
-        $NewParentID = $ParentID
-    }
-
-    #Execute Load
-    EPM_Execute-EPMATask `
-        -TaskName $LoadTaskName `
-        -TaskCommand "runDataRule" `
-        -TaskDetails ("$LoadRule $StartPeriod $EndPeriod $ImportMode $ExportMode $FileName") `
-        -TaskLevel $NewTaskLevel  `
-        -ParentID $NewParentID `
-        -HideTask:$HideTask
-    $LastStatus = $LASTEXITCODE
-    $LoadTask = $EPM_TASKLIST.getTask($LoadTaskName)
-
-    if ( $LastStatus -ne 0 ) {
-        #We had an error or kickouts, determine which.
-        #Grab Error Log
-        $ErrorLog = (Get-ChildItem "$EPM_PATH_SCRIPTS" -Filter runDataRule*.log `
-                        | Sort-Object LastWriteTime `
-                        | Select-Object -Last 1)
-        if ( $ErrorLog ) {
-            #Error Log found, Grab DM Log
-            $DMLog = [regex]::Match((Get-Content $ErrorLog.FullName),`
-                        "`"logFileName`":`"([a-zA-Z\/\.\:\-_0-9]+)`"").Groups[1].Value
-            $KickoutLog = [regex]::Match((Get-Content $ErrorLog.FullName),`
-                            "`"outputFileName`":`"([a-zA-Z\/\.\:\-_0-9]+)`"").Groups[1].Value
-            if ( $DMLog ) {
-                #Parse Just File Name
-                $DMLog = $DMLog.Substring($DMLog.LastIndexOf('/') + 1)
-                #Download DM Log
-                EPM_Get-File `
-                    -Name $DMLog `
-                    -Path $EPM_PATH_LOGS `
-                    -TaskLevel ($LoadTask.level + 1)  `
-                    -ParentID ($LoadTask.id) `
-                    -HideTask:$HideTask
-                if ( $LASTEXITCODE -ne 0 ) {
-                    #Error Log Not Found, Exit
-                    $LoadTask.updateTask(@{status = "ERROR"})
-                    if ( $HasParentTask ) {$Task.updateTask(@{status = "ERROR"})}
-                    Return 1 | Out-Null
-                }
-                #Download Kickout Log
-                if ($KickoutLog) {
-                    $KickoutLog = $KickoutLog.Substring($KickoutLog.LastIndexOf('/') + 1)
+            -HideTask:$HideTask
+        $LastStatus = $LASTEXITCODE
+        $LoadTask = $EPM_TASKLIST.getTask($LoadTaskName)
+    
+        if ( $LastStatus -ne 0 ) {
+            #We had an error or kickouts, determine which.
+            #Grab Error Log
+            $ErrorLog = (Get-ChildItem "$EPM_PATH_SCRIPTS" -Filter runDataRule*.log `
+                            | Sort-Object LastWriteTime `
+                            | Select-Object -Last 1)
+            if ( $ErrorLog ) {
+                #Error Log found, Grab DM Log
+                $DMLog = [regex]::Match((Get-Content $ErrorLog.FullName),`
+                            "`"logFileName`":`"([a-zA-Z\/\.\:\-_0-9]+)`"").Groups[1].Value
+                $KickoutLog = [regex]::Match((Get-Content $ErrorLog.FullName),`
+                                "`"outputFileName`":`"([a-zA-Z\/\.\:\-_0-9]+)`"").Groups[1].Value
+                if ( $DMLog ) {
+                    #Parse Just File Name
+                    $DMLog = $DMLog.Substring($DMLog.LastIndexOf('/') + 1)
+                    #Download DM Log
                     EPM_Get-File `
-                        -Name $KickoutLog `
+                        -Name $DMLog `
                         -Path $EPM_PATH_LOGS `
                         -TaskLevel ($LoadTask.level + 1)  `
                         -ParentID ($LoadTask.id) `
                         -HideTask:$HideTask
                     if ( $LASTEXITCODE -ne 0 ) {
-                        #No Kickouts, Exit
+                        #Error Log Not Found, Exit
                         $LoadTask.updateTask(@{status = "ERROR"})
                         if ( $HasParentTask ) {$Task.updateTask(@{status = "ERROR"})}
+                        if ( $StopOnError ) {EPM_End-Process; break}
                         Return 1 | Out-Null
-                        }
-                    #Parse Relevant Info
-                    $LoadID = ($DMLog.Substring($DMLog.LastIndexOf('/') + 1).Split("_")[1].Replace(".log","")).trim()
-                    $RuleName = ([regex]::Match((Get-Content "$EPM_PATH_LOGS\$DMLog"), `
-                                    "Rule Name    : (.*? )").Groups[1].Value).trim()
-                    $LoadFileName = ([regex]::Match((Get-Content "$EPM_PATH_LOGS\$DMLog"), `
-                                    "File Name.*: (.*?txt)").Groups[1].Value).trim()
-                    $LinePrefix = "$LoadID#$RuleName#$LoadFileName"
-
-                    foreach ( $line in (Get-Content "$EPM_PATH_LOGS\$KickoutLog") ) {
-                        $Kickout=""
-                        if ( $line.Contains("Error: 3303") ) {
-                            $arrLine = $line.split("|")
-                            $Kickout = "$($arrLine[2].trim())#$($arrLine[3].trim())"
-                            "$LinePrefix#$Kickout" | EPM_Log-Item -Clean -LogFile $EPM_LOG_KICKOUTS
-                        } elseif ( $line.contains("The member ")) {
-                            $Kickout = [regex]::Match(($line),"(The member )(.*)( does not exist)").Groups[2].Value
-                            "$LinePrefix#$Kickout#Text Data Load" | EPM_Log-Item -Clean -LogFile $EPM_LOG_KICKOUTS
-                        } elseif ( $line.contains("Fetch of Driver Member ")) {
-                            $Kickout = $([regex]::Match(($line),'(.*\")(.*)(\".*)').Groups[2].Value)
-                            "$LinePrefix#$Kickout#Text Data Load" | EPM_Log-Item -Clean -LogFile $EPM_LOG_KICKOUTS
-                        }
                     }
-
-                    #Update Warning
-                    $LoadTask.updateTask(@{
-                        status = "WARNING"; 
-                        errorMsg = "Review Kickouts for Load ID : $LoadID"
-                        })
-                    if ( $HasParentTask ) {$Task.updateTask(@{status = "WARNING"})}
-                } else {
-                    #Update Error
-                    $LoadTask.updateTask(@{status = "ERROR";})
-                    if ( $HasParentTask ) {$Task.updateTask(@{status = "ERROR"})}
+                    #Download Kickout Log
+                    if ($KickoutLog) {
+                        $KickoutLog = $KickoutLog.Substring($KickoutLog.LastIndexOf('/') + 1)
+                        EPM_Get-File `
+                            -Name $KickoutLog `
+                            -Path $EPM_PATH_LOGS `
+                            -TaskLevel ($LoadTask.level + 1)  `
+                            -ParentID ($LoadTask.id) `
+                            -HideTask:$HideTask
+                        if ( $LASTEXITCODE -ne 0 ) {
+                            #No Kickouts, Exit
+                            $LoadTask.updateTask(@{status = "ERROR"})
+                            if ( $HasParentTask ) {$Task.updateTask(@{status = "ERROR"})}
+                            if ( $StopOnError ) {EPM_End-Process; break}
+                            Return 1 | Out-Null
+                            }
+                        #Parse Relevant Info
+                        $LoadID = ($DMLog.Substring($DMLog.LastIndexOf('/') + 1).Split("_")[1].Replace(".log","")).trim()
+                        $RuleName = ([regex]::Match((Get-Content "$EPM_PATH_LOGS\$DMLog"), `
+                                        "Rule Name    : (.*? )").Groups[1].Value).trim()
+                        $LoadFileName = ([regex]::Match((Get-Content "$EPM_PATH_LOGS\$DMLog"), `
+                                        "File Name.*: (.*?txt)").Groups[1].Value).trim()
+                        $LinePrefix = "$LoadID#$RuleName#$LoadFileName"
+    
+                        foreach ( $line in (Get-Content "$EPM_PATH_LOGS\$KickoutLog") ) {
+                            $Kickout=""
+                            if ( $line.Contains("Error: 3303") ) {
+                                $arrLine = $line.split("|")
+                                $Kickout = "$($arrLine[2].trim())#$($arrLine[3].trim())"
+                                "$LinePrefix#$Kickout" | EPM_Log-Item -Clean -LogFile $EPM_LOG_KICKOUTS
+                            } elseif ( $line.contains("The member ")) {
+                                $Kickout = [regex]::Match(($line),"(The member )(.*)( does not exist)").Groups[2].Value
+                                "$LinePrefix#$Kickout#Text Data Load" | EPM_Log-Item -Clean -LogFile $EPM_LOG_KICKOUTS
+                            } elseif ( $line.contains("Fetch of Driver Member ")) {
+                                $Kickout = $([regex]::Match(($line),'(.*\")(.*)(\".*)').Groups[2].Value)
+                                "$LinePrefix#$Kickout#Text Data Load" | EPM_Log-Item -Clean -LogFile $EPM_LOG_KICKOUTS
+                            }
+                        }
+    
+                        #Update Warning
+                        $LoadTask.updateTask(@{
+                            status = "WARNING"; 
+                            errorMsg = "Review Kickouts for Load ID : $LoadID"
+                            })
+                        if ( $HasParentTask ) {$Task.updateTask(@{status = "WARNING"})}
+                    } else {
+                        #Update Error
+                        $LoadTask.updateTask(@{status = "ERROR";})
+                        if ( $HasParentTask ) {$Task.updateTask(@{status = "ERROR"})}
+                    }
+                    
                 }
-                
             }
+        } else {
+            if ( $HasParentTask ) {$Task.updateTask(@{status = "SUCCESS"})}
         }
-    } else {
-        if ( $HasParentTask ) {$Task.updateTask(@{status = "SUCCESS"})}
+    
+        if ( ( $LastStatus -ne 0 ) -and ( !$DMLog ) ){
+            if ( $HasParentTask ) {$Task.updateTask(@{status = "ERROR"})}
+            #$LoadTask.updateTask(@{status = "ERROR"})
+        } 
+    
+        if ( $StopOnError -and ($LoadTask.status -eq "ERROR") ) {EPM_End-Process; break}
     }
-
-    if ( ( $LastStatus -ne 0 ) -and ( !$DMLog ) ){
-        if ( $HasParentTask ) {$Task.updateTask(@{status = "ERROR"})}
-        #$LoadTask.updateTask(@{status = "ERROR"})
-    } 
-}
 
 
 # -----------------------------------------------------------------------------------
