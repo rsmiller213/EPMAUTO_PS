@@ -69,6 +69,8 @@ function EPM_Send-Notification{
         $EmailBody += "`n<caption style='$TitleStyle'>PROCESS SUMMARY</caption>"
         $EmailBody += "`n   <tr><td style='$HeaderStyle text-align: left; border-bottom: 0px;'>ENVIRONMENT</td>" +
                             "<td style='$CellStyle text-align: center;'>$EPM_ENV</td></tr>"
+        $EmailBody += "`n   <tr><td style='$HeaderStyle text-align: left; border-bottom: 0px;'>POD NUMBER</td>" +
+                            "<td style='$CellStyle text-align: center;'>$EPM_PODNUM</td></tr>"
         $EmailBody += "`n   <tr><td style='$HeaderStyle text-align: left; border-bottom: 0px;'>PROCESS</td>" + 
                             "<td style='$CellStyle text-align: center;'>$EPM_PROCESS</td></tr>"
         $EmailBody += "`n   <tr><td style='$HeaderStyle text-align: left; border-bottom: 0px;'>STATUS</td>" +
@@ -95,7 +97,7 @@ function EPM_Send-Notification{
               <th style='$HeaderStyle text-align: center;'>Value</th>
            </tr>
 "@
-        ForEach ($obj in (Get-Variable EPM_USER,EPM_URL,EPM_LOG_FULL,EPM_PATH_CURRENT_ARCHIVE | Select-Object Name,Value)) {
+        ForEach ($obj in (Get-Variable EPM_USER,EPM_PODNUM,EPM_URL,EPM_LOG_FULL,EPM_PATH_CURRENT_ARCHIVE | Select-Object Name,Value)) {
             $EmailBody += "`n   <tr>`n      <td style='$CellStyle'>$($obj.Name)</td><td style='$CellStyle'>$($obj.Value)</td>"
         }
         #Close Variable Table

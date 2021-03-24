@@ -4,7 +4,7 @@
 Param(
         [String]$Process = "ADHOC",
         [ValidateSet("TEST","PROD","SETUP")][String]$ExecEnvironment = "TEST",
-        [String]$PodNum = "4",
+        [String]$PodNum = "",
         [switch]$UseAPI
     )
 
