@@ -57,3 +57,5 @@ if (Test-Path "$EPM_PATH_CURRENT_ARCHIVE.zip") {
     Write-Host -ForegroundColor Red "   $EPM_PATH_CURRENT_ARCHIVE.zip Missing!"
     break
 }
+
+Write-Host -ForegroundColor Green "Setup Successful!"

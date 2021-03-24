@@ -4,6 +4,7 @@
 Param(
         [String]$Process = "ADHOC",
         [ValidateSet("TEST","PROD","SETUP")][String]$ExecEnvironment = "TEST",
+        [String]$PodNum = "4",
         [switch]$UseAPI
     )
 
@@ -69,11 +70,12 @@ $EPM_BACKUPS_RETAIN_NUM = 30
 # -----------------------------------------------------------------------------------
 $EPM_USER = ""
 $EPM_PASSFILE = "`"$EPM_PATH_SCRIPTS\pw.epw`""
+$EPM_PODNUM = $PodNum
 $EPM_DOMAIN = ""
 $EPM_DATACENTER = ""
 # Setup URLS
-$EPM_URL_PROD = "https://epm-$EPM_DOMAIN.epm.$EPM_DATACENTER.oraclecloud.com"
-$EPM_URL_TEST = "https://epm-test-$EPM_DOMAIN.epm.$EPM_DATACENTER.oraclecloud.com"
+$EPM_URL_PROD = "https://epm$EPM_PODNUM-$EPM_DOMAIN.epm.$EPM_DATACENTER.oraclecloud.com"
+$EPM_URL_TEST = "https://epm$EPM_PODNUM-test-$EPM_DOMAIN.epm.$EPM_DATACENTER.oraclecloud.com"
 #Setup Common URL
 $EPM_URL = "NA"
 if ($EPM_ENV -eq "PROD") {
