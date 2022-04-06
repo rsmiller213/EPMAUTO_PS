@@ -59,9 +59,9 @@ function EPM_Start-Process{
         #Display Starter Variables
         "======= STARTER VARIABLES =======" | EPM_Log-Item -Clean
         if ($EPMAPI_USED) {
-            (Get-Variable EPM_ENV,EPM_PROCESS,EPM_USER,EPM_PASSFILE,EPM_DOMAIN,EPM_DATACENTER,EPM_URL,EPM_LOG_FULL,EPM_PATH_CURRENT_ARCHIVE,EPMAPI_PASSFILE,EPMAPI_PLN_BASE_URI,EPMAPI_MIG_BASE_URI,EPMAPI_DMG_BASE_URI | Format-Table -AutoSize | Out-String).trim() | EPM_Log-Item -Clean
+            (Get-Variable EPM_ENV,EPM_PROCESS,EPM_USER,EPM_PASSFILE,EPM_DOMAIN,EPM_POD,EPM_DATACENTER,EPM_URL,EPM_LOG_FULL,EPM_PATH_CURRENT_ARCHIVE,EPMAPI_PASSFILE,EPMAPI_PLN_BASE_URI,EPMAPI_MIG_BASE_URI,EPMAPI_DMG_BASE_URI | Format-Table -AutoSize | Out-String).trim() | EPM_Log-Item -Clean
         } else {
-            (Get-Variable EPM_ENV,EPM_PROCESS,EPM_USER,EPM_PASSFILE,EPM_DOMAIN,EPM_DATACENTER,EPM_URL,EPM_LOG_FULL,EPM_PATH_CURRENT_ARCHIVE | Format-Table -AutoSize | Out-String).trim() | EPM_Log-Item -Clean
+            (Get-Variable EPM_ENV,EPM_PROCESS,EPM_USER,EPM_PASSFILE,EPM_DOMAIN,EPM_POD,EPM_DATACENTER,EPM_URL,EPM_LOG_FULL,EPM_PATH_CURRENT_ARCHIVE | Format-Table -AutoSize | Out-String).trim() | EPM_Log-Item -Clean
         }
         
         "" | EPM_Log-Item -Clean -IncludeSeparator

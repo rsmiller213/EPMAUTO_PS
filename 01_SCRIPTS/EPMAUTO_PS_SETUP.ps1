@@ -1,17 +1,17 @@
 ﻿# ===================================================================================
-#   Author : Randy Miller (SolveX Consulting, LLC)
-#   Created On : 04-02-2020
-#   Purpose : EPM Automate Setup Script
+#   Author : Randy Miller
+#   Created On : 2022-03-18
+#   Purpose : EPM Automation Framework Setup
 # ===================================================================================
 
 Unblock-File -Path "$PSScriptRoot\*"
 
 Write-Host -ForegroundColor Yellow @"
-Please ensure that you have set the variables under "Login Information" in the _EPM_Config.ps1 file before continuing.
-    EPM_USER
-    EPM_PASSFILE (do not need to run encryption, this setup will prompt you and will then encrypt)
-    EPM_DOMAIN
-    EPM_DATACENTER
+Please ensure that you have filled out the required configurations in _epmConfig.cfg before continuing.
+    username
+    domain
+    datacenter
+    pod_name
 "@
 
 $Ans = Read-Host -Prompt "Have You Set these Variables Up? [Y/N]:"

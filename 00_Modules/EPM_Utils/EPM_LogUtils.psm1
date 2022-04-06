@@ -1,7 +1,7 @@
 # ===================================================================================
 #   Author : Randy Miller (SolveX Consulting, LLC)
 #   Created On : 09-02-2020
-#   Purpose : House logging functions to use during EPM Automation (Oracle EPBCS)
+#   Purpose : House logging functions to use during EPM Automation (Oracle EPM)
 # ===================================================================================
 # -----------------------------------------------------------------------------------
 #   EPM UTILITIES - GENERAL / LOGGING
