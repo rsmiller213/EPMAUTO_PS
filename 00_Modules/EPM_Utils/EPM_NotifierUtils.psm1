@@ -288,6 +288,6 @@ function EPM_Send-Notification{
         }
     
         if ($EPM_EMAIL_CC.Count -gt 0) {$param.Add("CC",$EPM_EMAIL_CC)}
-        #if ($Notify -and ($EPM_EMAIL_CREDENTIALS -ne "") ) {Send-MailMessage @param -UseSsl -BodyAsHtml}
+        if ($Notify -and ($EPM_EMAIL_CREDENTIALS -ne "") ) {Send-MailMessage @param -UseSsl -BodyAsHtml}
         Set-Content -Path "$EPM_PATH_SCRIPTS\_EmailBody.htm" -Value $EmailBody
     }
